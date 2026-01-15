@@ -1,0 +1,280 @@
+{
+  "name": "LinkedIn Content",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1hvoFMejQTmMqkz7qhfo4vepd7RYcb4m3MGufVn3BCe4",
+          "mode": "list",
+          "cachedResultName": "LinkedIn Post",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hvoFMejQTmMqkz7qhfo4vepd7RYcb4m3MGufVn3BCe4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hvoFMejQTmMqkz7qhfo4vepd7RYcb4m3MGufVn3BCe4/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "To Do"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -592,
+        -208
+      ],
+      "id": "f10d4aad-2e22-4931-b136-7afd7897b179",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "65vFDqAl6iT4KJoz",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"Search the web for {{ $json.Topic }}\",\n  \"auto_parameters\": false,\n  \"topic\": \"general\",\n  \"search_depth\": \"basic\",\n  \"chunks_per_source\": 3,\n  \"max_results\": 2,\n  \"time_range\": null,\n  \"days\": 7,\n  \"include_answer\": true,\n  \"include_raw_content\": true,\n  \"include_images\": false,\n  \"include_image_descriptions\": false,\n  \"include_favicon\": false,\n  \"include_domains\": [],\n  \"exclude_domains\": [],\n  \"country\": null\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -384,
+        -208
+      ],
+      "id": "73a5d0ec-c99e-4b18-b2ae-97bfe9798da9",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Article 1: {{ $json.results[0].content }}\n\nArticle 2: {{ $json.results[1].content }}",
+        "options": {
+          "systemMessage": "=#Overview\n\nYou are an AI agent responsible generating a concise, inspiring LinkedIn post targeted at entrepreneurs, based on the content of two given articles.\n\n##Content\n- The agent receives 2 articles on a related topic.\n- The goal is to synthesize the key ideas into a short, professional LinkedIn post.\n- The tone should be motivational, forward- thinking, and relevant to the entrepreneurial mindset.\nPosts should be optimized for engagment using relevant hashtags.\n\n## Instruction\n1. Read and extract the core themes, trends, or insights from all two articles.\n2. Identify any common threads or overarching message.\n3. Write a LinkedIn post (max 1000 characters) that blends the main insights into a unified , inspiring message.\n4. Use 2-4 relavant hashtags that align with the post topic and entrepreneur interests.\n5. Do not quote or directly reference article sources. Focus on synthesiging ideas.\n6. Avoid any m-dash.\n\n##Tools\n- Article input system(structured content or plain text)\n- Keyword extraction utility (optional)\n- LinkedIn character counter (to enforce limit)\n\n##Example\n- Input: 2 articles on AI in startups, bootstraping, and the rise of solopreneurs.\n- Output:\n\"From AI copilots to lean bootstraping, the age of the solopreneurs is now.\nEntreprenuers are rewriting the rules- scaling smarter, faster and with less.\nEmbrace the shift. The tools are here. The future is solo-powered. \n#Entrepreneurship #AI #Bootstraping #Futureofwork\"\n\n## SOP(Standard Operating Procedure)\n1. Receive the 2 articles and briefly scan each to extract top insights.\n2. Group overlapping ideas into 1-2 core messages.\n3. Draft a LinkedIn post with a motivational tone, keeping under the character limit.\n4. Add hashtags appropriately.\n5. Review for clarity, grammar and impact.\n6. Do not use m dash.\n\n## Final Notes\n- Posts must always be original and never copy from the source articles.\n- Avoid technical jargon or overly niche terms- keep it accessible.\n- Prioritize clarity, brevity, and emotional resonance.\n---"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -176,
+        -208
+      ],
+      "id": "c4a98ee8-b46d-4ed8-89bb-389b0d15da73",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3-flash-preview",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        -16
+      ],
+      "id": "f822d792-895a-48c2-8a36-becc6ea4b094",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dnk2wkxAbF8ZQFzE",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1hvoFMejQTmMqkz7qhfo4vepd7RYcb4m3MGufVn3BCe4",
+          "mode": "list",
+          "cachedResultName": "LinkedIn Post",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hvoFMejQTmMqkz7qhfo4vepd7RYcb4m3MGufVn3BCe4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hvoFMejQTmMqkz7qhfo4vepd7RYcb4m3MGufVn3BCe4/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Topic": "={{ $('Get row(s) in sheet').item.json.Topic }}",
+            "Status": "Completed",
+            "Content": "={{ $json.output }}"
+          },
+          "matchingColumns": [
+            "Topic"
+          ],
+          "schema": [
+            {
+              "id": "Topic",
+              "displayName": "Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Content",
+              "displayName": "Content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        176,
+        -208
+      ],
+      "id": "63dca3b2-093d-4a26-8e4f-fe18e3a3d31e",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "65vFDqAl6iT4KJoz",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        -224
+      ],
+      "id": "7e073092-1398-488f-b33c-b999e647d1b0",
+      "name": "When clicking ‘Execute workflow’"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6f95c083-4ab2-401b-9df7-500ca212eb5e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7c0a0c6b232ec2b8b6b0d0b1301d063b1c90906038e1012b962302fff256979d"
+  },
+  "id": "ecljxkwRYRZyPAru",
+  "tags": []
+}
