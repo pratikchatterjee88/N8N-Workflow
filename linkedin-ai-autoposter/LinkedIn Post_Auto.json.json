@@ -1,0 +1,338 @@
+{
+  "name": "LinkedIn Post_Auto _tutorial copy",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "daysInterval": 2,
+              "triggerAtHour": 16
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "9f179337-1686-41d9-947e-3b41ba7d2a2c",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an AI social media strategist tasked with writing engaging posts for professional audience.\n\n**Goal:** Write a concise, insightful LinkedIn post about the *latest AI trends, news, or breakthroughs* from the last 24- 48 hours. Use the Tavily Web Search tool to fetch the current information before writing.\n\n**Instructions:**\n1. Analyze the Tavily search results to find 1-2 hot AI trends or notable research updates.\n2. Write the post in a Confident, clear, and conversational tone - like an expert explaning to a smart colleague.\n3. Keep it under 250- 300 words.\n4. Do NOT use markdown bold (**text**) - LinkedIn does not render it. Use plain text only with line breaks for structure.\n5. Add 3-4 relavant hashtags(e.g., #AI, #GenAI, #AgenticAI, #ML, #DataScience).\n6. Include 2 emojis max- only at the hook or CTA, not scattered throughout. (avoid overuse, only where it adds impact).\n7. Start with a strong hook - a specific fact or bold claim, not a question. Put it in the first first line to grab attention.\n8. Do not use m- dash in the content (—).\n9. Make sure the content has some business translation.\n10. End with a short **CTA** (e.g., *What do you think about this? Let me know below!*).\n\n**Output Format (JSON):**\n{\n  \"post\": \"Your formatted LinkedIn post text here with hastags and emojis\"\n}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "ac11b9d4-73c9-454d-8e53-61fcc5609003",
+      "name": "Trending Topic Post"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer <Your API Key>"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"query\": \"latest trend and news in the field of AI that can not be overlooked.\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        368,
+        208
+      ],
+      "id": "af3e0705-f34c-4030-ae8c-98a50be31073",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "//Get the raw output from the AI Agent node\nconst rawOutput = $json.output || \"\";\n\n//Remove ```json and``` markers if present\nlet cleaned = rawOutput.replace(/```json|```/g,'').trim();\n\n//parse json if its valid\nlet post = \"\";\ntry {\n  const parsed = JSON.parse(cleaned);\n  post = parsed.post || \"\";\n} catch (e){\n  post = cleaned; //fallback if json.parse fails\n}\n\n//Return a clean object\nreturn [{ json: {post} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "e8aa85d5-af53-4114-bb7b-ff3eeee50a2c",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert content strategist.\n\n**Goal:** Extract the single most powerful idea from the LinkedIn post below \nand turn it into a short, punchy headline for an image or banner.\n\nThe headline must:\n- Be maximum 8 words\n- Capture the core message instantly\n- Use active voice and strong words\n- Sound like a magazine cover or billboard\n- Contain zero hashtags, emojis, or punctuation (except a colon if needed)\n\nBad example: \"AI Is Changing Things For Businesses Today\"\nGood example: \"AI Cuts Your Workload In Half\"\n\n**Input Post:**\n{{ $json.post }}\n\nOutput as JSON only, no extra text:\n{\n  \"headline\": \"Your headline here\"\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        768,
+        0
+      ],
+      "id": "00209b11-44ce-4782-a2ff-f95694476013",
+      "name": "Image Generation"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        704,
+        208
+      ],
+      "id": "35503f90-bdd9-48a0-9298-c731b7d4d9f0",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dR2MIw8adu6ZuUQi",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the input data correctly\nconst rawText = $input.first().json.text || $input.first().json.output || \"\";\n// Romove code block markers\nlet cleaned = rawText.replace(/```json|```/g, '').trim();\n\nlet finalText = \"\";\ntry {\n  //Parse the JSON if valid\n  const parsed = JSON.parse(cleaned);\n  finalText = parsed.headline || \"\";\n} catch (e) {\n  // If parsing fails, try to clean manually\n  finalText = cleaned.replace(/^{|}$/g, '')\n                     .replace(/\"headline\":/i, '')\n                     .replace(/[*{}]/g, '')\n                     .trim();\n  }\n// Replace only the raw string\nreturn [{ json: {text: finalText} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "c1c73998-6c2d-4cec-8aa8-f05f37218b07",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.stability.ai/v2beta/stable-image/generate/core",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "authorization",
+              "value": "Bearer <Your API Key>"
+            },
+            {
+              "name": "accept",
+              "value": "image/*"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $json.text }}"
+            },
+            {
+              "name": "output_format",
+              "value": "webp"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1328,
+        0
+      ],
+      "id": "54c1ec9e-2e3f-4b88-8b94-780b80502376",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "postAs": "organization",
+        "organization": "110742135",
+        "text": "={{ $('Code').item.json.post }}",
+        "shareMediaCategory": "IMAGE",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        0
+      ],
+      "id": "05dbd5b0-eb4a-4d58-a5f3-83bb390df64c",
+      "name": "Create a post",
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "HS5o5XVgwj74hEGQ",
+          "name": "LinkedIn account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        80,
+        208
+      ],
+      "id": "b80fcc7a-3f07-4aba-a68d-2aa34d57cb7f",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "yPWL168bgUOVBxna",
+          "name": "Groq account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Trending Topic Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "ai_tool": [
+        [
+          {
+            "node": "Trending Topic Post",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trending Topic Post": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Image Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Image Generation",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image Generation": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Create a post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Trending Topic Post",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a post": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "ced34280-a5a0-456b-8d4f-cc86524c5178",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "070343247a785e9313f60d0ec6acc7cc3b06ab893d92487f0d8e357d6665fd90"
+  },
+  "id": "NhN2b8NKSM5KAd7v",
+  "tags": []
+}
