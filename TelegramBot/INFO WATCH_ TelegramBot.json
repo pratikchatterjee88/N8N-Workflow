@@ -1,0 +1,301 @@
+{
+  "name": "INFO WATCH: TelegramBot",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8,
+              "triggerAtMinute": null
+            }
+          ]
+        }
+      },
+      "id": "a58b72af-ec64-422f-ae13-c380daa90a6f",
+      "name": "⏰ Daily 8AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        7184,
+        2656
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Today is {{ $today.toFormat('dd LLL yyyy') }}.\n\nYou are INFO Watch — an elite geopolitical, financial, and crypto intelligence analyst.\n\nYou have access to these tools. Use them ALL in this order:\n\nSTEP 1 — CURRENCIES: Call the \"Fetch Currency Rates\" tool to get USD exchange rates for INR, SAR, AED, BHD.\n\nSTEP 2 — CRYPTO: Call the \"Fetch Crypto Prices\" tool to get BTC, ETH, XRP, BNB prices and 24h changes.\n\nSTEP 3 — WEATHER: Call the \"Fetch Weather\" tool to get current weather for Kolkata, Bahrain, Riyadh, Dubai, Baghdad.\n\nSTEP 4 — STOCKS (NIFTY): Call the \"Fetch NIFTY\" tool to get the NIFTY 50 index value.\n\nSTEP 5 — STOCKS (SENSEX): Call the \"Fetch SENSEX\" tool to get the SENSEX index value.\n\nSTEP 6 — NEWS (IMPORTANT — DO MULTIPLE SEARCHES): You must gather 5 REAL headlines. Do NOT use page titles like \"Top Headlines — April 2\" as a headline. Search for ACTUAL news events.\n  Search 1: Use SerpApi to search \"Iran Israel USA war latest news today\"\n  Search 2: Use SerpApi to search \"world news today {{ $today.toFormat('yyyy-MM-dd') }}\"\n  Search 3: Use SerpApi to search \"breaking news today\"\n  From these 3 searches, extract 5 SPECIFIC headlines about real events. Each headline must describe a concrete event (who did what, where). Examples of GOOD headlines: \"Iran launches retaliatory strikes on US bases in Iraq\" or \"Fed signals rate pause amid global tensions\". Examples of BAD headlines: \"Top U.S. & World Headlines\" or \"Headlines for April 2\" — these are page titles, NOT news.\n\nSTEP 7 — OIL + CONTEXT: Use SerpApi to search \"Brent WTI crude oil price today {{ $today.toFormat('yyyy-MM-dd') }}\". Extract Brent and WTI prices AND a 1-sentence driver.\n\nSTEP 8 — STOCK SENTIMENT: Use SerpApi to search \"Indian stock market NIFTY SENSEX today {{ $today.toFormat('yyyy-MM-dd') }}\". Get a 1-line sentiment.\n\nSTEP 9 — FORMAT: Once ALL data is collected, produce the final Telegram message.\n\nRULES:\n- You MUST call every tool listed above. Do not skip any.\n- Use EXACT values from each tool response. Do NOT round, estimate, or fabricate.\n- If any tool fails, use SerpApi as fallback to search for that data.\n- If data is still unavailable, write \"data unavailable\" for that field.\n- Do NOT narrate your process. Just call tools and output the final message.\n- You may make multiple SerpApi calls (up to 10 is fine).\n\nOUTPUT FORMAT (Telegram Markdown — output ONLY this final message):\n\n🌍 INFO Watch — {{ $today.toFormat('dd LLL yyyy') }}\n━━━━━━━━━━━━━━━━━━━━━━\n\n📰 *Top Stories*\n1. [headline]\n2. [headline]\n3. [headline]\n4. [headline]\n5. [headline]\n\n━━━━━━━━━━━━━━━━━━━━━━\n🛢️ *Oil & Energy*\nBrent: $[Price] | WTI: $[Price] [🔺 or 🔻] [1 sentence on driver]\n\n━━━━━━━━━━━━━━━━━━━━━━\n📈 *Indian Stock Markets*\nNIFTY: [Value] | SENSEX: [Value] [🟢 or 🔴] [1-line sentiment]\n\n━━━━━━━━━━━━━━━━━━━━━━\n🔮 *Market Outlook (AI Forecast)*\n[Short-term 1-3 day outlook. Be specific about risks/breakouts.]\n\n━━━━━━━━━━━━━━━━━━━━━━\n₿ *Crypto Pulse*\nBTC: $[Price] ([24h%]) | ETH: $[Price] ([24h%]) | XRP: $[Price] ([24h%]) | BNB: $[Price] ([24h%])\n[1 sentence on crypto market mood]\n\n━━━━━━━━━━━━━━━━━━━━━━\n💱 *Currency Snapshot*\nINR: [Value] | SAR: [Value] | AED: [Value] | BHD: [Value] vs 1 USD\n[Flag ⚠️ only if notable volatility]\n\n🌤️ *Regional Weather*\nKolkata: [Temp]°C, [Cond] | Bahrain: [Temp]°C, [Cond] | Riyadh: [Temp]°C, [Cond] | Dubai: [Temp]°C, [Cond] | Baghdad: [Temp]°C, [Cond]\n[One witty line.]\n\n━━━━━━━━━━━━━━━━━━━━━━\n🧠 *Analyst's Take*\n[2-3 bold sentences connecting macro trends.]\n\n━━━━━━━━━━━━━━━━━━━━━━\n📡 _INFO Watch • Powered by AI_\n⚠️ _Not financial advice_",
+        "options": {
+          "systemMessage": "You are INFO Watch — a data-driven intelligence agent.\n\nYou have multiple tools available. You MUST call ALL of them to gather real data before producing output.\n\nTOOL USAGE RULES:\n1. Call EVERY HTTP tool (currencies, crypto, weather, NIFTY, SENSEX) to get real-time data.\n2. Call SerpApi MULTIPLE TIMES for news — at least 3 separate searches (Iran/Israel/USA conflict, world news, breaking news).\n3. Use EXACT values from tool responses. NEVER invent or estimate numbers.\n4. If an HTTP tool fails or returns an error, use SerpApi as a fallback to search for that specific data point.\n5. You may make up to 12 SerpApi calls — do not limit yourself.\n6. Do NOT narrate. No \"I am now fetching\" or \"Let me search\". Just call tools silently, then output the final formatted message.\n7. NEVER skip a tool. If you skip a data source, the output will be incomplete and wrong.\n8. Your creative contributions: headline selection from search results, oil driver sentence, stock sentiment, market outlook, analyst take, witty weather line.\n\nCRITICAL — NEWS HEADLINES RULES:\n- Headlines must describe SPECIFIC REAL EVENTS (who did what, where, when).\n- NEVER use generic page titles like \"Top Headlines — April 2\" or \"Breaking News Today\" as a headline.\n- Prioritize geopolitical news (especially Iran/Israel/USA tensions, Middle East developments) as headline #1 or #2.\n- Each headline should be ONE sharp sentence that tells the reader what happened.\n- If SerpApi returns page titles instead of actual headlines, look at the snippet/description text from the search result for the real story.\n- Always include at least 1 headline on Iran/Israel/USA/Middle East if there is any relevant news."
+        }
+      },
+      "id": "df2218d3-c15f-4be8-bc7a-08f5c8615690",
+      "name": "🤖 INFO WATCH AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        7744,
+        2608
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Fetch current USD exchange rates for INR, SAR, AED, and BHD. Returns JSON with rates object. No parameters needed — just call this tool.",
+        "url": "https://api.frankfurter.dev/v2/rates?base=USD&quotes=INR,SAR,AED,BHD",
+        "optimizeResponse": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        7600,
+        2928
+      ],
+      "id": "77666203-83d1-42ea-96ef-8c31673716f3",
+      "name": "Fetch Currency Rates"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Fetch current prices and 24h percentage change for Bitcoin (BTC), Ethereum (ETH), Ripple (XRP), and Binance Coin (BNB) in USD. Returns JSON with price and usd_24h_change for each coin. No parameters needed.",
+        "url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,ripple,binancecoin&vs_currencies=usd&include_24hr_change=true",
+        "optimizeResponse": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        7744,
+        2992
+      ],
+      "id": "26fc66d5-51b4-40be-b930-1bcbba32f866",
+      "name": "Fetch Crypto Prices"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Fetch current weather for 5 cities: Kolkata (index 0), Bahrain/Manama (index 1), Riyadh (index 2), Dubai (index 3), Baghdad (index 4). Returns JSON array with current_weather containing temperature in Celsius and weathercode. Weather codes: 0=Clear, 1=Mostly Clear, 2=Partly Cloudy, 3=Overcast, 45=Foggy, 51=Drizzle, 61=Light Rain, 63=Rain, 65=Heavy Rain, 80=Showers, 95=Thunderstorm. No parameters needed.",
+        "url": "https://api.open-meteo.com/v1/forecast?latitude=22.57,26.22,24.71,25.20,33.31&longitude=88.36,50.58,46.67,55.27,44.37&current_weather=true",
+        "optimizeResponse": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        7888,
+        2944
+      ],
+      "id": "9bf991d3-2527-4ef7-8713-1d6dfc682e9e",
+      "name": "Fetch Weather"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Fetch the current NIFTY 50 index value from Yahoo Finance. Look for chart.result[0].meta.regularMarketPrice for the current value. No parameters needed.",
+        "url": "https://query1.finance.yahoo.com/v8/finance/chart/%5ENSEI",
+        "optimizeResponse": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        8048,
+        2944
+      ],
+      "id": "c39f2640-df69-46c8-9f9f-100cc5951698",
+      "name": "Fetch NIFTY"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Fetch the current SENSEX (BSE) index value from Yahoo Finance. Look for chart.result[0].meta.regularMarketPrice for the current value. No parameters needed.",
+        "url": "https://query1.finance.yahoo.com/v8/finance/chart/%5EBSESN",
+        "optimizeResponse": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        8208,
+        2944
+      ],
+      "id": "f6592448-d6fd-41e1-ad93-4421354c6a60",
+      "name": "Fetch SENSEX"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolSerpApi",
+      "typeVersion": 1,
+      "position": [
+        8368,
+        2944
+      ],
+      "id": "790428f3-aa17-4c0e-bde1-14d1b76c8ca3",
+      "name": "SerpAPI",
+      "credentials": {
+        "serpApi": {
+          "id": "8KHHEsb26B9O0Yxf",
+          "name": "SerpAPI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        7424,
+        2880
+      ],
+      "id": "f7b0334d-3fbc-4371-b75e-ccfdb551a2c3",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "755wLZIeNoXUEJiL",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "=8252041720",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "disable_web_page_preview": true,
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "a506951f-8261-46f5-87fd-376cc844a46f",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        8400,
+        2608
+      ],
+      "webhookId": "3b396d66-3a48-4a0b-9772-5129de5bc8bc",
+      "credentials": {
+        "telegramApi": {
+          "id": "iw9tBQr5SGUAcDfJ",
+          "name": "Telegram account 4"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "⏰ Daily 8AM Trigger": {
+      "main": [
+        [
+          {
+            "node": "🤖 INFO WATCH AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Currency Rates": {
+      "ai_tool": [
+        [
+          {
+            "node": "🤖 INFO WATCH AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Crypto Prices": {
+      "ai_tool": [
+        [
+          {
+            "node": "🤖 INFO WATCH AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weather": {
+      "ai_tool": [
+        [
+          {
+            "node": "🤖 INFO WATCH AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch NIFTY": {
+      "ai_tool": [
+        [
+          {
+            "node": "🤖 INFO WATCH AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch SENSEX": {
+      "ai_tool": [
+        [
+          {
+            "node": "🤖 INFO WATCH AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SerpAPI": {
+      "ai_tool": [
+        [
+          {
+            "node": "🤖 INFO WATCH AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 INFO WATCH AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🤖 INFO WATCH AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a8046007-5738-4ada-9229-38b4cfa64f97",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "226d141af978153d4b6518d1e4bc0c170b57ea8a0c1cb2eebdde205c02a81e9a"
+  },
+  "id": "V6uGk4uB75KcqtA5",
+  "tags": []
+}
