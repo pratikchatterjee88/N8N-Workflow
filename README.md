@@ -7,3 +7,4 @@ for AI content, recruiting automation, and business operations.
 |---|---|---|
 | [LinkedIn AI AutoPoster](./linkedin-ai-autoposter/) | Posts AI-researched content to LinkedIn every 2 days | Groq, Gemini, Stability AI, Tavily |
 | [CV Screening Automator](./CV_Screening/) | Automates candidate screening pipeline | (tools) |
+| [TelegramBot_Daily News Aggregrator](./TelegramBot/) | Daily schedules of latest news with realtime prices of Crude, Bitcoin, Sensex, Nifty, Dollar against other currency etc | (tools) |
