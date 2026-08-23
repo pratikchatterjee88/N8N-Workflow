@@ -1,0 +1,861 @@
+{
+  "name": "CV Screening — Prototype (JD + CVs in one form)",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=<goal>\nConvert the job description below into a structured, auditable list of evaluation criteria. Do NOT score any candidate. Do NOT add requirements that are not stated or clearly implied by the JD.\n</goal>\n\n<job_description>\n{{ $json.body['Job Description'] }}\n</job_description>\n\n<instructions>\n1. Extract CORE requirements (must-haves): things a candidate cannot lack.\n2. Extract PREFERRED qualifications (nice-to-haves / bonuses).\n3. Give each requirement:\n   - a short stable id (\"c1\",\"c2\"... for core; \"p1\",\"p2\"... for preferred)\n   - a one-line \"requirement\" phrased as a checkable criterion\n   - a \"weight\" from 1 (minor) to 3 (critical), reflecting how central it is\n4. Keep each requirement atomic — one skill/qualification per item. Split compound requirements (\"React and TypeScript\") into separate items.\n5. If the JD is empty or is not a job description, return empty arrays.\n</instructions>\n\n<output_format>\nReturn ONLY this JSON object, no prose:\n{\n  \"core_requirements\": [ { \"id\": \"c1\", \"requirement\": \"<string>\", \"weight\": <1-3> } ],\n  \"preferred\":         [ { \"id\": \"p1\", \"requirement\": \"<string>\", \"weight\": <1-3> } ]\n}\n</output_format>",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You extract structured hiring criteria from a job description. You do not invent requirements that are not present. You separate non-negotiable Core Requirements from nice-to-have Preferred Qualifications, and you assign each an importance weight from 1 to 3. You output only JSON."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -208,
+        160
+      ],
+      "id": "8d410b10-68c3-41e2-acfb-f7ea58656b2f",
+      "name": "Extract Criteria"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        384
+      ],
+      "id": "09232cb5-3b64-42bc-9816-f52abc4ad340",
+      "name": "Gemini (criteria)",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "UknrfzM4dVR43Ec4",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"core_requirements\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"id\":          { \"type\": \"string\" },\n          \"requirement\": { \"type\": \"string\" },\n          \"weight\":      { \"type\": \"number\" }\n        },\n        \"required\": [\"id\", \"requirement\", \"weight\"],\n        \"additionalProperties\": false\n      }\n    },\n    \"preferred\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"id\":          { \"type\": \"string\" },\n          \"requirement\": { \"type\": \"string\" },\n          \"weight\":      { \"type\": \"number\" }\n        },\n        \"required\": [\"id\", \"requirement\", \"weight\"],\n        \"additionalProperties\": false\n      }\n    }\n  },\n  \"required\": [\"core_requirements\", \"preferred\"],\n  \"additionalProperties\": false\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        384
+      ],
+      "id": "390e85b8-cff8-435d-a97b-9c95d7f4d012",
+      "name": "Criteria Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fan out: emit one item per uploaded CV, carrying the criteria + the file binary.\n// Iterates ALL binary keys so it does not depend on how the request names them.\nconst criteria = $json.output || {};\nconst req = $('Webhook').first();\nconst bin = req.binary || {};\nconst body = req.json.body || {};\nconst jobTitle = body['Job Title'] || '';\nconst keys = Object.keys(bin);\nconst out = [];\nfor (const k of keys) {\n  const b = bin[k];\n  const name = b.fileName || k;\n  out.push({\n    json: {\n      criteria,\n      job_title: jobTitle,\n      source_file: name,\n      file_ext: (name.split('.').pop() || '').toLowerCase()\n    },\n    binary: { data: b }\n  });\n}\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        160
+      ],
+      "id": "d41bebcc-51cb-4dba-aed7-ef3104fce16a",
+      "name": "Fan out CVs"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.file_ext }}",
+              "rightValue": "pdf",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "id": "a73f8041-621e-4f82-83be-a1d80986d0b5"
+            },
+            {
+              "leftValue": "={{ $json.file_ext }}",
+              "rightValue": "png",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "id": "e69c6e41-2958-43f1-b040-cbbc7c25b151"
+            },
+            {
+              "leftValue": "={{ $json.file_ext }}",
+              "rightValue": "jpg",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "id": "1d987c46-4aeb-4dc7-a506-a323c77f8047"
+            },
+            {
+              "leftValue": "={{ $json.file_ext }}",
+              "rightValue": "jpeg",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "id": "6d5a7956-1103-45e3-9df7-3e051c6aaa83"
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        160
+      ],
+      "id": "1754caf4-87fa-477a-8489-d3c669574b8b",
+      "name": "OCR-able file type?"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mistralAi",
+      "typeVersion": 1,
+      "position": [
+        672,
+        64
+      ],
+      "id": "df1c75df-dbc2-4e51-81f8-7e5951738226",
+      "name": "Extract CV Text (Mistral)",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "oDdxVbpPcjxpIXjF",
+          "name": "Mistral_New"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ($json.extractedText || $json.text || '').length }}",
+              "rightValue": 250,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        64
+      ],
+      "id": "e34b45ba-3967-4110-983a-fd5b3d6fbf70",
+      "name": "Enough text to assess?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "criteria",
+              "value": "={{ $('Fan out CVs').item.json.criteria }}",
+              "type": "object"
+            },
+            {
+              "id": "s2",
+              "name": "extractedText",
+              "value": "={{ $json.extractedText || $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "job_title",
+              "value": "={{ $('Fan out CVs').item.json.job_title }}",
+              "type": "string"
+            },
+            {
+              "id": "s4",
+              "name": "source_file",
+              "value": "={{ $('Fan out CVs').item.json.source_file }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1104,
+        -48
+      ],
+      "id": "7051f19f-626b-48ba-86ea-079b66ff64b5",
+      "name": "Attach criteria"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=<goal>\nFor EACH criterion in <criteria>, decide whether the candidate's CV provides evidence that it is met, partially met, or not met. Cite the evidence. Do not compute or output any overall score — that is done elsewhere.\n</goal>\n\n<criteria>\n{{ JSON.stringify($json.criteria) }}\n</criteria>\n\n<candidate_cv>\n{{ $json.extractedText }}\n</candidate_cv>\n\n<rules>\n- Judge ONLY on text explicitly present in the CV. Do not infer or assume.\n- \"met\"     = the CV clearly and directly satisfies the criterion.\n- \"partial\" = the CV touches the criterion but weakly, ambiguously, or without the depth/duration the criterion asks for.\n- \"not_met\" = the CV provides no evidence for the criterion.\n- \"evidence\" MUST be a short verbatim snippet quoted from the CV (<= 25 words), or null. If evidence is null, verdict CANNOT be \"met\".\n- Reason in one short sentence per criterion.\n- Lean toward \"partial\" (not \"not_met\") when the candidate clearly works in the right domain but the exact phrasing is absent — do not hard-drop adjacent or transferable experience.\n- If the CV text is empty or is clearly not a resume, set \"cv_quality\" to \"unreadable\" and mark every verdict \"not_met\".\n</rules>\n\n<output_format>\nReturn ONLY this JSON object, no prose:\n{\n  \"cv_quality\": \"ok\" | \"unreadable\",\n  \"verdicts\": [\n    {\n      \"id\": \"<criterion id, matching the input>\",\n      \"verdict\": \"met\" | \"partial\" | \"not_met\",\n      \"evidence\": \"<verbatim CV snippet, or null>\",\n      \"reasoning\": \"<one sentence>\"\n    }\n  ]\n}\n</output_format>",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a CV evaluation assistant. You judge a candidate's CV against a fixed list of criteria. For each criterion you decide: met, partial, or not_met, and you cite the exact CV text that justifies it. You judge ONLY on what the CV explicitly states — you never assume or infer skills that are not written. You output only JSON. You do not output a score or a rating."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1328,
+        -48
+      ],
+      "id": "df2928bd-2278-4112-8208-59f14c3f16e0",
+      "name": "Assess CV vs Criteria"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1328,
+        176
+      ],
+      "id": "4766d9f8-da22-4e55-a5cd-9092c6d03cf3",
+      "name": "Gemini (assess)",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "UknrfzM4dVR43Ec4",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"cv_quality\": { \"type\": \"string\", \"enum\": [\"ok\", \"unreadable\"] },\n    \"verdicts\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"id\":        { \"type\": \"string\" },\n          \"verdict\":   { \"type\": \"string\", \"enum\": [\"met\", \"partial\", \"not_met\"] },\n          \"evidence\":  { \"type\": [\"string\", \"null\"] },\n          \"reasoning\": { \"type\": \"string\" }\n        },\n        \"required\": [\"id\", \"verdict\", \"evidence\", \"reasoning\"],\n        \"additionalProperties\": false\n      }\n    }\n  },\n  \"required\": [\"cv_quality\", \"verdicts\"],\n  \"additionalProperties\": false\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1520,
+        176
+      ],
+      "id": "e564a75a-fa3c-4b18-9bb9-782b80898348",
+      "name": "Verdict Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Turn per-criterion verdicts into a BUCKET (deterministic, reproducible).\n// The LLM never emits the bucket — this node does, so policy lives in one place.\n// Buckets: Strong / Possible / Unlikely / NeedsReview.\n// A number (coverage) is computed for internal sorting but is NOT the headline.\nconst POINTS = { met: 1, partial: 0.5, not_met: 0 };\nconst round2 = x => Math.round(x * 100) / 100;\nconst out = [];\n\nfor (const item of $input.all()) {\n  const d = item.json || {};\n  const criteria = d.criteria || {};\n  const core = Array.isArray(criteria.core_requirements) ? criteria.core_requirements : [];\n  const pref = Array.isArray(criteria.preferred) ? criteria.preferred : [];\n  const verdicts = Array.isArray(d.verdicts) ? d.verdicts : [];\n  const cvQuality = d.cv_quality || 'ok';\n\n  const byId = {};\n  for (const v of verdicts) if (v && v.id) byId[v.id] = v;\n\n  function cov(list) {\n    let num = 0, den = 0, miss = 0;\n    for (const c of list) {\n      const w = Number(c.weight) > 0 ? Number(c.weight) : 1;\n      const vv = (byId[c.id] || {}).verdict || 'not_met';\n      num += (POINTS[vv] ?? 0) * w;\n      den += w;\n      if (vv === 'not_met') miss += 1;\n    }\n    return { score: den ? num / den : 0, miss };\n  }\n\n  const c = cov(core);\n  const p = cov(pref);\n\n  // ---- bucket policy (tunable) ----\n  let bucket, reason;\n  if (cvQuality === 'unreadable' || core.length === 0) {\n    bucket = 'NeedsReview';\n    reason = core.length === 0 ? 'No criteria extracted from JD.' : 'CV text unreadable or not a resume.';\n  } else if (c.miss === 0 && c.score >= 0.8) {\n    bucket = 'Strong';\n  } else if (c.miss <= 1 && c.score >= 0.5) {\n    bucket = 'Possible';   // lenient: one missing core still allows Possible\n  } else {\n    bucket = 'Unlikely';\n  }\n\n  // ---- human-readable reason from met/missing core ----\n  if (!reason) {\n    const missCore = [];\n    for (const cc of core) {\n      const vv = (byId[cc.id] || {}).verdict || 'not_met';\n      if (vv === 'not_met') missCore.push(cc.requirement);\n    }\n    const parts = [`${core.length - c.miss}/${core.length} core requirements addressed`];\n    if (missCore.length) parts.push('missing: ' + missCore.slice(0, 4).join('; '));\n    reason = parts.join(' — ');\n  }\n\n  // ---- full auditable breakdown ----\n  const breakdown = [];\n  for (const cc of core) {\n    const vv = byId[cc.id] || {};\n    breakdown.push({ type: 'core', id: cc.id, requirement: cc.requirement, weight: cc.weight, verdict: vv.verdict || 'not_met', evidence: vv.evidence || null, reasoning: vv.reasoning || null });\n  }\n  for (const cc of pref) {\n    const vv = byId[cc.id] || {};\n    breakdown.push({ type: 'preferred', id: cc.id, requirement: cc.requirement, weight: cc.weight, verdict: vv.verdict || 'not_met', evidence: vv.evidence || null, reasoning: vv.reasoning || null });\n  }\n\n  out.push({ json: {\n    job_title: d.job_title || '',\n    source_file: d.source_file || '',\n    bucket,\n    reason,\n    core_total: core.length,\n    core_met: core.length - c.miss,\n    core_missing: c.miss,\n    coverage_internal: round2(c.score),\n    breakdown_json: JSON.stringify(breakdown),\n    criteria_json: JSON.stringify(criteria)\n  } });\n}\n\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        -48
+      ],
+      "id": "dbf0fe37-992a-4217-9043-81e6a9da48eb",
+      "name": "Compute Bucket"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "job_title",
+              "value": "={{ $json.job_title }}",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "source_file",
+              "value": "={{ $json.source_file }}",
+              "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "bucket",
+              "value": "NeedsReview",
+              "type": "string"
+            },
+            {
+              "id": "f4",
+              "name": "reason",
+              "value": "Unsupported file type for prototype OCR (e.g. DOCX). Add a text-extraction node here.",
+              "type": "string"
+            },
+            {
+              "id": "f5",
+              "name": "core_total",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "f6",
+              "name": "core_met",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "f7",
+              "name": "core_missing",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "f8",
+              "name": "coverage_internal",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "f9",
+              "name": "breakdown_json",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        480
+      ],
+      "id": "d4332a7f-c3b7-411c-8184-fbd83b6810e0",
+      "name": "NeedsReview — file type"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "u1",
+              "name": "job_title",
+              "value": "={{ $('Fan out CVs').item.json.job_title }}",
+              "type": "string"
+            },
+            {
+              "id": "u2",
+              "name": "source_file",
+              "value": "={{ $('Fan out CVs').item.json.source_file }}",
+              "type": "string"
+            },
+            {
+              "id": "u3",
+              "name": "bucket",
+              "value": "NeedsReview",
+              "type": "string"
+            },
+            {
+              "id": "u4",
+              "name": "reason",
+              "value": "CV could not be read (OCR failed or extracted text too short). Open the file manually.",
+              "type": "string"
+            },
+            {
+              "id": "u5",
+              "name": "core_total",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "u6",
+              "name": "core_met",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "u7",
+              "name": "core_missing",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "u8",
+              "name": "coverage_internal",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "u9",
+              "name": "breakdown_json",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1088,
+        128
+      ],
+      "id": "28fb461d-99dd-4bcc-b1d3-a992e92ff41f",
+      "name": "NeedsReview — unreadable"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1fB1TYd1CvY-D354Dbd27fE9jtQkKt7iKfmoahsEd99U",
+          "mode": "list",
+          "cachedResultName": "HR_CV",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fB1TYd1CvY-D354Dbd27fE9jtQkKt7iKfmoahsEd99U/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Job Title": "={{ $json.job_title }}",
+            "Source File": "={{ $json.source_file }}",
+            "Bucket": "={{ $json.bucket }}",
+            "Reason": "={{ $json.reason }}",
+            "Core Met": "={{ $json.core_met }}",
+            "Core Total": "={{ $json.core_total }}",
+            "Core Missing": "={{ $json.core_missing }}",
+            "Coverage (Internal)": "={{ $json.coverage_internal }}",
+            "Json Breakdown": "={{ $json.breakdown_json }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Job Title",
+              "displayName": "Job Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Source File",
+              "displayName": "Source File",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Bucket",
+              "displayName": "Bucket",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reason",
+              "displayName": "Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Core Met",
+              "displayName": "Core Met",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Core Total",
+              "displayName": "Core Total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Core Missing",
+              "displayName": "Core Missing",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Coverage (Internal)",
+              "displayName": "Coverage (Internal)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Json Breakdown",
+              "displayName": "Json Breakdown",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2496,
+        240
+      ],
+      "id": "4e40645b-de3c-42e7-bd68-a69b53917301",
+      "name": "Append result to Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xngN7TBjYE2U7Z0u",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## CV Screening — Prototype\n\n**One form:** Job Title + JD (pasted) + one-or-more CVs uploaded together.\n\n**Flow:** JD → structured criteria (once) → fan out CVs → OCR (PDF/image) → readability guard → per-criterion verdicts + evidence → deterministic BUCKET → Google Sheet.\n\n**Buckets:** Strong / Possible / Unlikely / NeedsReview.\nThe LLM never picks the bucket — the Compute Bucket code does, so it is reproducible and auditable. A coverage number is kept only for internal sorting, not shown as a headline.\n\n**Before running:**\n1. Set your Gemini, Mistral and Google Sheets credentials on the coloured nodes.\n2. In `Append result to Sheet`, replace the Sheet ID and add these column headers to row 1:\n   Job Title | Source File | Bucket | Reason | Core Met | Core Total | Core Missing | Coverage (internal) | Breakdown JSON\n3. Test with 5–10 known CVs and eyeball the buckets before trusting it.",
+        "height": 360,
+        "width": 640
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        -272
+      ],
+      "id": "a6f72711-7b4d-419d-ac5b-b44bcadc8f67",
+      "name": "note_main"
+    },
+    {
+      "parameters": {
+        "content": "### Deliberately deferred (the \"changes later\")\n\n- **DOCX extraction.** Word files currently route to NeedsReview. Add an Extract-From-File / convert step on the false branch of `OCR-able file type?` to read .docx text, then feed it into the same guard → assess path.\n- **Scale / folder-watch.** This is a form for testing. For 300–400 CVs arriving over time, swap the form for a Drive/SharePoint trigger + batching, and extract criteria once per role (store it) instead of per submission.\n- **HR approval gate on criteria.** Production should let HR review/approve the extracted criteria before any CV is judged (legal defensibility).\n- **De-dup / re-run safety** when a real datastore replaces the sheet.",
+        "height": 300,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1456,
+        512
+      ],
+      "id": "ec375622-fcb8-433d-accc-e0596903f95c",
+      "name": "note_later"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "f9f337ed-0b48-4312-b13d-e17550688205",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -528,
+        160
+      ],
+      "id": "5efd4dbf-22f9-4968-af26-609fb4ed62fc",
+      "name": "Webhook",
+      "webhookId": "f9f337ed-0b48-4312-b13d-e17550688205"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2720,
+        240
+      ],
+      "id": "ae27041a-c0e8-4613-8b89-d53cb0523f27",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gemini (criteria)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract Criteria",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criteria Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Extract Criteria",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Criteria": {
+      "main": [
+        [
+          {
+            "node": "Fan out CVs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fan out CVs": {
+      "main": [
+        [
+          {
+            "node": "OCR-able file type?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OCR-able file type?": {
+      "main": [
+        [
+          {
+            "node": "Extract CV Text (Mistral)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NeedsReview — file type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract CV Text (Mistral)": {
+      "main": [
+        [
+          {
+            "node": "Enough text to assess?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NeedsReview — unreadable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enough text to assess?": {
+      "main": [
+        [
+          {
+            "node": "Attach criteria",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NeedsReview — unreadable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach criteria": {
+      "main": [
+        [
+          {
+            "node": "Assess CV vs Criteria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini (assess)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Assess CV vs Criteria",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verdict Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Assess CV vs Criteria",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assess CV vs Criteria": {
+      "main": [
+        [
+          {
+            "node": "Compute Bucket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Bucket": {
+      "main": [
+        [
+          {
+            "node": "Append result to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NeedsReview — file type": {
+      "main": [
+        [
+          {
+            "node": "Append result to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NeedsReview — unreadable": {
+      "main": [
+        [
+          {
+            "node": "Append result to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Criteria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append result to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "f4a9498b-5724-4432-8172-728ee07d3b3b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "226d141af978153d4b6518d1e4bc0c170b57ea8a0c1cb2eebdde205c02a81e9a"
+  },
+  "nodeGroups": [],
+  "id": "uBtfuFR9zjI4Iv3p",
+  "tags": []
+}
